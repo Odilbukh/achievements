@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AchievementsController;
+use App\Http\Controllers\CommentCreateController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,3 +20,5 @@ Route::get('/', function () {
 });
 
 Route::get('/users/{user}/achievements', [AchievementsController::class, 'index']);
+
+Route::post('/comments/create', CommentCreateController::class);
