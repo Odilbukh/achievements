@@ -158,18 +158,6 @@ class User extends Authenticatable
         return null;
     }
 
-    public function unlockBadge(string $badgeName): void
-    {
-        if (!$this->hasBadge($badgeName)) {
-            $this->badge()->create(['name' => $badgeName]);
-        }
-    }
-
-    public function hasBadge(string $badgeName): bool
-    {
-        return $this->badge()->where('name', $badgeName)->exists();
-    }
-
     public function nextAchievementFor(): array
     {
         $unlockedAchievements = $this->achievements->pluck('name');
@@ -182,26 +170,79 @@ class User extends Authenticatable
         return $nextAchievement ? $nextAchievement->pluck('name')->toArray() : [];
     }
 
+    public function currentBadgeName(): ?string
+    {
+        return $this->badge ? $this->badge->name : null;
+    }
+
+    public function unlockBadge(): string
+    {
+        $unlockedAchievementsCount = $this->achievements()->count();
+        $badgeRequirements = Badge::orderBy('requirement', 'desc')
+            ->pluck('requirement', 'name');
+
+        foreach ($badgeRequirements as $badgeName => $requirement) {
+            if ($unlockedAchievementsCount >= $requirement) {
+                return $badgeName;
+            }
+        }
+
+        return 'Beginner';
+    }
+
+    public function getBadgeId(string $badgeName): ?int
+    {
+        $badge = Badge::where('name', $badgeName)
+            ->select('id')
+            ->first();
+
+        if ($badge) {
+            return $badge->id;
+        }
+
+        return null;
+    }
+    public function setBadge(): void
+    {
+        $badgeName = $this->unlockBadge();
+
+        if ($this->currentBadgeName() === $badgeName) {
+            return;
+        }
+
+        $badgeId = $this->getBadgeId($badgeName);
+
+        if ($badgeId)
+        {
+            $this->update([
+                 'badge_id' => $badgeId
+            ]);
+        }
+    }
+
     public function nextBadgeFor(): ?string
     {
-        $currentBadge = $this->badge->name;
-        $badgesListArray = Badge::all()->toArray();
+        $unlockedAchievementsCount = $this->achievements()->count();
+        $badgeRequirements = Badge::pluck('requirement', 'name');
 
-        $currentBadgeIndex = array_search($currentBadge, $badgesListArray, true);
-        if ($currentBadgeIndex !== false && $currentBadgeIndex < count($badgesListArray) - 1) {
-            return $badgesListArray[$currentBadgeIndex + 1];
+        foreach ($badgeRequirements as $badgeName => $requirement) {
+            if ($unlockedAchievementsCount < $requirement) {
+                return $badgeName;
+            }
         }
 
         return null;
     }
 
-    public function remainingToUnlockNext(): int
+    public function remainingToUnlockNextBadge(): int
     {
-        $achievementsCount = $this->achievements->count();
+        $unlockedAchievementsCount = $this->achievements()->count();
+        $badgeRequirements = Badge::pluck('requirement', 'name');
 
-        $nextBadge = $this->nextBadgeFor();
-        if ($nextBadge) {
-            return BadgeRequirementsEnum::getValue($nextBadge) - $achievementsCount;
+        foreach ($badgeRequirements as $requirement) {
+            if ($unlockedAchievementsCount < $requirement) {
+                return $requirement - $unlockedAchievementsCount;
+            }
         }
 
         return 0;

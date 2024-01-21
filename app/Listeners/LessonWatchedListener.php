@@ -28,5 +28,6 @@ class LessonWatchedListener
         }
 
         $user->unlockLessonAchievement();
+        $user->setBadge();
     }
 }

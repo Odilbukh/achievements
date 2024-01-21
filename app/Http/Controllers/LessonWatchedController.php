@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Events\LessonWatched;
 use App\Http\Requests\LessonWatchedRequest;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class LessonWatchedController extends Controller
 {
@@ -19,25 +21,32 @@ class LessonWatchedController extends Controller
             ->where('watched', true)
             ->exists();
 
-        if ($isWatched)
-        {
+        if ($isWatched) {
             return response()->json([
                 'message' => 'The lesson was watched already',
             ]);
         }
 
-        $newRecord = DB::table('lesson_user')
-            ->insert([
+        try {
+            DB::table('lesson_user')
+                ->insert([
+                    'lesson_id' => $validated['lesson_id'],
+                    'user_id' => $validated['user_id'],
+                    'watched' => true,
+                ]);
+        } catch (Exception $exception) {
+            Log::alert($exception->getMessage(), [
                 'lesson_id' => $validated['lesson_id'],
                 'user_id' => $validated['user_id'],
                 'watched' => true,
             ]);
+        }
+
 
         event(new LessonWatched($validated['user_id']));
 
         return response()->json([
             'message' => 'The lesson watched successfully',
-            'data' => $newRecord
         ], 201);
     }
 }

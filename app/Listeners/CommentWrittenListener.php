@@ -28,5 +28,6 @@ class CommentWrittenListener
         }
 
         $user->unlockCommentAchievement();
+        $user->setBadge();
     }
 }
