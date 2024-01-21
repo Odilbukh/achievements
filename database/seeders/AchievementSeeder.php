@@ -10,7 +10,7 @@ class AchievementSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (AchievementsEnum::toValues() as $key => $value) {
+        foreach (AchievementsEnum::toArray() as $key => $value) {
             Achievement::create(['name' => $value]);
         }
     }

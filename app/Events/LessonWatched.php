@@ -11,17 +11,15 @@ class LessonWatched
 {
     use Dispatchable, SerializesModels;
 
-    public $lesson;
-    public $user;
+    public $user_id;
 
     /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct(Lesson $lesson, User $user)
+    public function __construct(int $user_id)
     {
-        $this->lesson = $lesson;
-        $this->user = $user;
+        $this->user_id = $user_id;
     }
 }

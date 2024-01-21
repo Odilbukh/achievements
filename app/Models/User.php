@@ -5,9 +5,18 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\BadgeRequirementsEnum;
 use App\Enums\BadgesEnum;
+use App\Enums\CommentAchievementsEnum;
+use App\Enums\LessonAchievementsEnum;
+use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -49,7 +58,7 @@ class User extends Authenticatable
     /**
      * The comments that belong to the user.
      */
-    public function comments()
+    public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
     }
@@ -57,7 +66,7 @@ class User extends Authenticatable
     /**
      * The lessons that a user has access to.
      */
-    public function lessons()
+    public function lessons(): BelongsToMany
     {
         return $this->belongsToMany(Lesson::class);
     }
@@ -65,31 +74,88 @@ class User extends Authenticatable
     /**
      * The lessons that a user has watched.
      */
-    public function watched()
+    public function watched(): BelongsToMany
     {
         return $this->belongsToMany(Lesson::class)->wherePivot('watched', true);
     }
 
-    public function achievements()
+    public function achievements(): BelongsToMany
     {
-        return $this->hasMany(Achievement::class);
+        return $this->belongsToMany(Achievement::class, 'achievement_user', 'user_id', 'achievement_id');
     }
 
-    public function badge()
+    public function badge(): BelongsTo
     {
-        return $this->hasOne(Badge::class);
+        return $this->belongsTo(Badge::class);
     }
 
-    public function unlockAchievement(string $achievementName): void
+    public function unlockLessonAchievement(): void
     {
-        if (!$this->hasAchievement($achievementName)) {
-            $this->achievements()->create(['name' => $achievementName]);
+        $watchedLessonsCount = $this->watched->count();
+
+        foreach (LessonAchievementsEnum::toArray() as $threshold => $achievementName) {
+            if ($watchedLessonsCount >= $threshold && !$this->hasAchievement($achievementName, $this->id)) {
+                $this->setAchievement($achievementName, $this->id);
+            }
         }
     }
 
-    public function hasAchievement(string $achievementName): bool
+    public function unlockCommentAchievement(): void
     {
-        return $this->achievements()->where('name', $achievementName)->exists();
+        $writtenCommentsCount = $this->comments->count();
+
+        foreach (CommentAchievementsEnum::toArray() as $threshold => $achievementName) {
+            if ($writtenCommentsCount >= $threshold && !$this->hasAchievement($achievementName, $this->id)) {
+                $this->setAchievement($achievementName, $this->id);
+            }
+        }
+    }
+
+    public function getAchievementId(string $achievementName): ?int
+    {
+        $achievement = Achievement::where('name', $achievementName)
+            ->select('id')
+            ->first();
+
+        if ($achievement) {
+            return $achievement->id;
+        }
+
+        return null;
+    }
+
+    public function setAchievement(string $achievementName, int $user_id): void
+    {
+        $achievementId = $this->getAchievementId($achievementName);
+
+        if ($achievementId) {
+            try {
+                DB::table('achievement_user')
+                    ->insert([
+                        'achievement_id' => $achievementId,
+                        'user_id' => $user_id
+                    ]);
+            } catch (Exception $exception) {
+                Log::alert($exception->getMessage(), [
+                    'achievement_id' => $achievementId,
+                    'user_id' => $user_id
+                ]);
+            }
+        }
+    }
+
+    public function hasAchievement(string $achievementName, int $user_id): ?bool
+    {
+        $achievementId = $this->getAchievementId($achievementName);
+
+        if ($achievementId) {
+            return DB::table('achievement_user')
+                ->where('achievement_id', $achievementId)
+                ->where('user_id', $user_id)
+                ->exists();
+        }
+
+        return null;
     }
 
     public function unlockBadge(string $badgeName): void
@@ -104,18 +170,16 @@ class User extends Authenticatable
         return $this->badge()->where('name', $badgeName)->exists();
     }
 
-    public static function nextAchievementFor(User $user): ?string
+    public function nextAchievementFor(): array
     {
-        $unlockedAchievements = $user->achievements->pluck('name');
-        $achievementsListArray = Achievement::all()->toArray();
+        $unlockedAchievements = $this->achievements->pluck('name');
 
-        foreach ($achievementsListArray as $achievement) {
-            if (!$unlockedAchievements->contains($achievement)) {
-                return $achievement;
-            }
-        }
+        $nextAchievement = Achievement::whereNotIn('name', $unlockedAchievements)
+            ->select('name')
+            ->orderBy('id')
+            ->get();
 
-        return null;
+        return $nextAchievement ? $nextAchievement->pluck('name')->toArray() : [];
     }
 
     public function nextBadgeFor(): ?string
