@@ -172,7 +172,7 @@ class User extends Authenticatable
 
     public function currentBadgeName(): ?string
     {
-        return $this->badge ? $this->badge->name : null;
+        return $this->badge ? $this->badge->name : 'Beginner';
     }
 
     public function unlockBadge(): string
