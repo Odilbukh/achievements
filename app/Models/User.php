@@ -214,9 +214,16 @@ class User extends Authenticatable
 
         if ($badgeId)
         {
-            $this->update([
-                 'badge_id' => $badgeId
-            ]);
+            try {
+                $this->badge_id = $badgeId;
+                $this->save();
+            } catch (Exception $exception) {
+                Log::alert($exception->getMessage(), [
+                    'user_id' => $this->id,
+                    'badge_id' => $badgeId
+                ]);
+            }
+
         }
     }
 
