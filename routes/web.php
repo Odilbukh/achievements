@@ -23,4 +23,4 @@ Route::get('/', function () {
 Route::get('/users/{user}/achievements', [AchievementsController::class, 'index']);
 
 Route::post('/comments/create', CommentCreateController::class);
-Route::post('lessons/watched', LessonWatchedController::class);
+Route::post('/lessons/watched', LessonWatchedController::class);
