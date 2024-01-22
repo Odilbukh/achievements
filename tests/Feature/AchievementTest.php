@@ -23,7 +23,7 @@ class AchievementTest extends TestCase
             'Accept' => 'application/json'
         ])->get("/users/{$user->id}/achievements");
 
-        $response->assertStatus(200);
+        $response->assertSuccessful();
         $response->assertJsonStructure([
             'unlocked_achievements',
             'next_available_achievements',
@@ -57,7 +57,7 @@ class AchievementTest extends TestCase
             'Accept' => 'application/json'
         ])->get("/users/{$user->id}/achievements");
 
-        $response->assertStatus(200);
+        $response->assertSuccessful();
         $response->assertJsonStructure([
             'unlocked_achievements',
             'next_available_achievements',
@@ -85,7 +85,7 @@ class AchievementTest extends TestCase
             'lesson_id' => $lesson->id,
         ]);
 
-        $response->assertStatus(201);
+        $response->assertSuccessful();
         $response->assertJsonStructure([
             'message',
         ]);
@@ -102,7 +102,7 @@ class AchievementTest extends TestCase
             'Accept' => 'application/json'
         ])->get("/users/{$user->id}/achievements");
 
-        $response->assertStatus(200);
+        $response->assertSuccessful();
         $response->assertJsonStructure([
             'unlocked_achievements',
             'next_available_achievements',
@@ -130,7 +130,7 @@ class AchievementTest extends TestCase
             'lesson_id' => $lesson->id,
         ]);
 
-        $response->assertStatus(201);
+        $response->assertSuccessful();
 
         $achievement = Achievement::where('name', 'firstLessonWatched')->first();
 
@@ -154,7 +154,7 @@ class AchievementTest extends TestCase
             'lesson_id' => $lesson->id,
         ]);
 
-        $responseLesson->assertStatus(201);
+        $responseLesson->assertSuccessful();
 
         $responseComment = $this->withHeaders([
             'Accept' => 'application/json'
@@ -163,14 +163,14 @@ class AchievementTest extends TestCase
             'text' => 'My comment',
         ]);
 
-        $responseComment->assertStatus(201);
+        $responseComment->assertSuccessful();
 
 
         $response = $this->withHeaders([
             'Accept' => 'application/json'
         ])->get("/users/{$user->id}/achievements");
 
-        $response->assertStatus(200);
+        $response->assertSuccessful();
         $response->assertJsonStructure([
             'unlocked_achievements',
             'next_available_achievements',

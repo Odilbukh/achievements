@@ -168,7 +168,7 @@ class BadgeTest extends TestCase
         ])->get("/users/{$user->id}/achievements");
 
         $response->assertSuccessful();
-dd($user);
+
         $response->assertJsonFragment([
             "current_badge" => "Master",
             "next_badge" => null,
